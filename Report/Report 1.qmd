@@ -1,0 +1,324 @@
+---
+title: "Report -1"
+author: "Submitted by Sarbojit Das"
+date: today
+date-format: long
+format: 
+  pdf:
+    number-sections: true
+    number-depth: 3
+    keep-tex: true
+    documentclass: article
+    include-in-header:
+      text: |
+        \usepackage[noblocks]{authblk}
+        \renewcommand*{\Authsep}{, }
+        \renewcommand*{\Authand}{, }
+        \renewcommand*{\Authands}{, }
+        \renewcommand\Affilfont{\small}
+execute: 
+  cache: false
+editor: visual
+geometry: margin=1in
+header-includes:
+   - \usepackage{amsmath, amssymb, setspace}
+   - \onehalfspacing
+   - \usepackage{etoolbox} 
+   - \makeatletter 
+   - \preto{\@verbatim}{\topsep=3pt \partopsep=3pt } 
+   - \makeatother
+---
+
+# Dataset
+
+The `advertising` data set, contained in the `glmtoolbox` package in `R`, consists of sales of that product in $200$ different markets. It also includes advertising budgets for the product in each of those markets for three different media: TV, radio and newspapers.
+
+Following is an extended description of the terminologies associated with this [dataset](https://www.statlearning.com/s/Advertising.csv):
+
+1.  [TV]{.underline}: a numeric vector indicating the advertising budget on TV.
+2.  [radio]{.underline}: a numeric vector indicating the advertising budget on radio.
+3.  [newspaper]{.underline}: a numeric vector indicating the advertising budget on newspaper.
+4.  [sales]{.underline}: a numeric vector indicating the sales of the interest product.
+
+```{r}
+#| label: load-packages
+#| include: false
+#| message: false
+library(knitr)
+```
+
+First of all, we need to load our dataset from the `glmtoolbox` package in `R`.
+
+```{r}
+#| message: false
+library(glmtoolbox)
+data(advertising)
+dat <- advertising
+```
+
+# Exploratory Data Analysis (EDA)
+
+We plot the data to understand characteristics about it. Plotting a scatterplot of the features.
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| fig-height: 5
+plot(dat, col=c("red"))
+```
+
+From the plot, we see that:
+
+1.  There's somewhat of a positive linear trend for TV vs sales and radio vs sales.
+2.  Clustering of observations towards the center occur for newspaper vs sales. Hence, columns are very weakly related with each other. So. correlation might be closer to zero.
+
+Hence, we are thereby motivated to build a simple linear regression model (SLRM) considering response $y$ as sales and covariates: newspaper, radio and TV respectively.
+
+To justify our claim, we compute the correlation matrix between the columns as follows:
+
+```{r}
+#| tbl-cap: Correlation matrix for advertising dataset
+#| echo: false
+kable(round(cor(dat), 3))
+```
+
+# Simple Linear Regression Model
+
+Consider, the design matrix given by $X = (\underset{\sim}{X_1}, \underset{\sim}{X_2}, \underset{\sim}{X_3})$ denoting the vector of predictors, namely, radio, sales and newspaper respectively for $n$ sampled observations.
+
+[Assumptions]{.underline}:
+
+|                            |                                                                                                                              |
+|------------------------|------------------------------------------------|
+| **Linearity**              | The relationship between $X_i$ (covariates) and $y$ (response) must be linear for $i=1,2,3$.                                 |
+| **Independence of errors** | There is not a relationship between the residuals and the $y$ (response) variable; in other words, is independent of errors. |
+| **Normality of errors**    | The residuals must be approximately normally distributed.                                                                    |
+| **Equal variances**        | The variance of the residuals is the same for all values of $X_i$ (covariates) for $i=1,2,3$.                                |
+
+We define our SLRM model considering sales as reponse, $y$ and radio as covariate, $X_1$ with the noise term $\epsilon$. Both the variables are continuous in nature. For $n$ observations, our model is defined as follows:
+
+$$
+y_j = \beta_{0} + \beta_{1}X_{1j} + \epsilon_j \text{ for } j=1,\cdots,n
+$$
+
+where $\beta_0 \text{ and } \beta_1$ are the coefficients to be estimated.
+
+In `R`, we use the `lm()` function to fit the simple linear regression model.
+
+```{r}
+lm.fit <- lm (sales ~ radio, data = dat)
+```
+
+[Summary statistics of our model]{.underline}: For this, we use the `summary()` function in `R`.
+
+```{r}
+summary(lm.fit)
+```
+
+[Fitted model's coefficients]{.underline}: The obtained estimated coefficients are:
+
+```{r}
+#| echo: false
+kable(data.frame(coef(lm.fit)))
+```
+
+## Visualisations
+
+### Plot - 1
+
+```{r}
+#| fig-align: center
+#| fig-cap: Plot of regression line fitted to data
+plot(dat$radio, dat$sales, pch = 20,
+     xlab = "radio", ylab = "sales", col = "blue")
+points(dat$radio, predict(lm.fit), pch = 20, col = "orange")
+abline(lm.fit, col = "red", lty = 2, lwd = 2)
+legend ("topleft", legend = c("Observed Data", "Predictions", "Fitted Regression line"), 
+        col = c("blue", "orange", "red"), pch = c(15,15, 19), lty = c(NA, NA, 2), 
+        lwd = c(NA, NA, 2), cex = 0.7, pt.cex = c(1.2,1.2,0.2))
+```
+
+### Plot - 2
+
+```{r}
+#| fig-align: center
+#| fig-cap: Plot of predicted response (fits) against residuals
+plot(predict(lm.fit), residuals(lm.fit), 
+     col = "purple", pch  = "*", 
+     xlab = "Predicted sales", ylab = "Residuals")
+```
+
+The scatter plot does not show any pattern/shape. Hence, variance of the residuals should be same across all values of the X-axis and the correlation should be approximately 0. Thus, the $2^{nd} \text{ and }4^{th}$ assumptions have been been met.
+
+### Plot - 3
+
+```{r}
+#| fig-align: center
+#| fig-cap: Histogram
+hist(residuals(lm.fit), col = "red", 
+     border = "white", main = "Histogram of residuals",
+     xlab = "Residuals", freq = FALSE)
+lines(density(residuals(lm.fit)), col = "blue", lty = 2, lwd = 2)
+```
+
+From the histogram of the residuals, we conclude that it is approximately normally distributed. Hence, the $3^{rd}$ assumption is met.
+
+# Binary Classification:
+
+We fix a small window of values around $X_1$.
+
+```{r}
+#| fig-align: center
+#| fig-cap: Conditioned Histogram of Sales
+index <- dat$radio > 10 & dat$radio <= 35
+hist(dat$sales[index], col = "green", main = "Histogram of sales given radio", 
+     xlab = "Sales conditioned on radio")
+```
+
+From the histogram, we see that the conditioned distribution of sales given radio is approximately normal.
+
+1. [Quantiles for our response]{.underline}:
+
+```{r}
+#| echo: false
+quantile(dat$sales)
+```
+
+[**Converting continuous response to discrete type**]{.underline}
+
+
+
+|                                                                                                                                                                                                  |
+|------------------------------------------------------------------------|
+| [**Rule:**]{.underline} We set a threshold of sales value as $17$. If observations in response is greater than the aforementioned threshold, then we assign it to Class $1$, else, to Class $0$. |
+
+```{r}
+y <- ifelse (dat$sales > 17, 1, 0)
+```
+
+2.  [Finding the estimated probabilities of classification]{.underline}:
+
+```{r}
+# Setting up our design matrix
+X <- cbind(1, dat$radio) 
+# Estimated beta
+beta.hat <- matrix (solve(t(X) %*% X) %*% t(X) %*% y, ncol = 1)
+# Estimated probabilities of classification
+pi.hat <- exp(X %*% beta.hat)/(1 + exp(X %*% beta.hat) )
+qi.hat <- 1 - pi.hat
+predict.probs <- data.frame(pi.hat ,qi.hat)
+names(predict.probs) <- c("Class 1", "Class 0")
+kable(head(predict.probs), caption = "Snapshot of Predicted Probabilities")
+```
+
+3.  [Computing the predicted response for a particular threshold]{.underline}:
+
+```{r}
+#| cache: false
+threshold <- 0.60
+predict.y <- ifelse(pi.hat > 0.60, 1, 0)
+```
+
+## Confusion Matrix
+
+Now, we compute the confusion matrix.
+
+```{r}
+#| cache: false
+foo <- data.frame(y, predict.y)
+tp <- sum(foo[ ,1] == 1 & foo[ ,2] == 1)
+fn <- sum(foo[ ,1] == 1 & foo[ ,2] == 0)
+fp <- sum(foo[ ,1] == 0 & foo[ ,2] == 1)
+tn <- sum(foo[ ,1 ] == 0 & foo[, 2] == 0)
+confusion.matrix <- matrix(c(tp, fn, fp, tn), nrow = 2, ncol = 2, byrow=TRUE)
+colnames(confusion.matrix) <- c("Predicted: Class 1", "Predicted: Class 0")
+rownames(confusion.matrix) <- c("Actual: Class 1", "Actual: Class 0")
+confusion.matrix
+```
+
+\newpage
+## Sensitivity and Specificity
+
+```{r}
+#| cache: false
+#| tbl-cap: Computed sensitivity and specificity for threshold = 0.6
+tpr <- tp/(tp + fn)
+fpr <- fp/(fp + tn)
+sensitivity <- tpr
+specificity <- tn/(tn + fp)
+kable(data.frame(sensitivity,specificity))
+```
+
+## Model Accuracy
+
+```{r}
+#| cache: false
+(tp+tn)/dim(foo[1])[1]
+```
+
+Our model's accuracy is $78.5\%$ for the chosen threshold.
+
+## Misclassification Rate
+
+```{r}
+1 - (tp+tn)/dim(foo[1])[1]
+```
+
+Our model's misclassification rate is $21.5\%$ for the chosen threshold.
+
+\newpage
+## ROC and AUC Curves
+
+```{r}
+#| fig-align: center
+#| layout-nrow: 2
+#| layout-ncol: 1
+#| fig-height: 4
+threshold.vec <- seq(0, 1, length = 1e3)
+sensitivity.vec <- numeric(length = 1e3)
+specificity.vec <- numeric(length = 1e3)
+for (i in 1:length(threshold.vec))
+{
+ threshold <- threshold.vec[i]
+predict.y <- ifelse(pi.hat > threshold, 1, 0)
+foo <- data.frame(y, predict.y)
+tp <- sum(foo[ ,1] == 1 & foo[ ,2] == 1)
+fn <- sum(foo[ ,1] == 1 & foo[ ,2] == 0)
+fp <- sum(foo[ ,1] == 0 & foo[ ,2] == 1)
+tn <- sum(foo[ ,1 ] == 0 & foo[, 2] == 0)
+sensitivity.vec[i] <- tp/(tp + fn)
+specificity.vec[i] <- 1 - (fp/(fp + tn))
+}
+dat <- data.frame(threshold.vec, specificity.vec, sensitivity.vec)
+plot( dat[c(2,3)], type="l", col = "red", xlab = "Specificity", 
+      ylab = "Sensitivity", main = "ROC Curve", xlim = c(0,1), ylim = c(0,1), lwd = 2)
+lines(x = specificity.vec, y = specificity.vec, lty = 2, col = "black", lwd = 2)
+legend ("bottom", legend = c("ROC Curve","Random Guess Curve"), 
+        col = c("red","black"), lty = c(1,2), lwd = c(2,2), cex=0.7)
+
+plot( dat[c(2,3)], type ="l", xlab = "Specificity", 
+      ylab = "Sensitivity", main = "AUC Curve")
+polygon(x = c(min(dat[c(2,3)]$specificity.vec), dat[c(2,3)]$specificity.vec,
+              max(dat[c(2,3)]$specificity.vec)),
+        y = c(0, dat[c(2,3)]$sensitivity.vec, 0), col = "violet")
+```
+\newpage
+
+## Optimal Threshold
+```{r}
+#| tbl-cap: Choosing optimal threshold
+index <- dat$sensitivity.vec > 0.92 & (dat$specificity.vec >0.73 & dat$specificity.vec < 0.8)
+kable(dat[index, ], row.names = FALSE)
+```
+Optimal threshold is $0.5845846$
+
+Finding the model accuracy:
+```{r}
+#| tbl-cap: Computed sensitivity and specificity for threshold = 0.5845846
+tpr <- tp/(tp + fn)
+fpr <- fp/(fp + tn)
+sensitivity <- tpr
+specificity <- tn/(tn + fp)
+(tp+tn)/200
+```
+Model accuracy is $72\%$.
